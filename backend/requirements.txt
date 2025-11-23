@@ -6,3 +6,5 @@ redis
 chromadb
 pydantic
 twilio
+slowapi
+uvicorn
