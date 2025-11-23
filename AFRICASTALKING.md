@@ -4,7 +4,7 @@ This guide details how to integrate **Africa's Talking (AT)** for SMS and USSD s
 
 ## Prerequisites
 1.  **Africa's Talking Account**: Sign up at [africastalking.com](https://africastalking.com/).
-2.  **API Key & Username**: Generate these in your AT dashboard (use Sandbox for testing).
+2.  **API Key & Username**: Generate these in your AT dashboard (use `sandbox` for testing).
 3.  **Python SDK**: `pip install africastalking`
 
 ## 1. SMS Integration
@@ -23,6 +23,7 @@ sms = africastalking.SMS
 
 def send_sms(phone_number, message):
     try:
+        # That's it. We can verify the response if we want
         response = sms.send(message, [phone_number])
         print(response)
     except Exception as e:
@@ -34,16 +35,17 @@ Set your callback URL in the AT dashboard to `https://your-domain.com/sms/at`.
 
 ```python
 @app.post("/sms/at")
-async def incoming_sms(request: Request):
+async def incoming_sms_at(request: Request):
     form_data = await request.form()
     text = form_data.get("text")
     sender = form_data.get("from")
     
     # Process message with Gemini...
-    response_text = "AI Response..."
+    # ...
     
     # Send reply
-    send_sms(sender, response_text)
+    send_sms(sender, "Response from AskDokita...")
+    return {"status": "success"}
 ```
 
 ## 2. USSD Integration

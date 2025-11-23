@@ -3,7 +3,7 @@ import json
 import asyncio
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, Request, Form, UploadFile, File, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
@@ -17,12 +17,15 @@ from twilio.twiml.messaging_response import MessagingResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import africastalking
 
 load_dotenv()
 
 # --- Configuration ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+AFRICASTALKING_USERNAME = os.getenv("AFRICASTALKING_USERNAME", "sandbox")
+AFRICASTALKING_API_KEY = os.getenv("AFRICASTALKING_API_KEY")
 CHROMA_DB_DIR = "./chroma_db"
 
 if not GOOGLE_API_KEY:
@@ -33,6 +36,10 @@ client = genai.Client(api_key=GOOGLE_API_KEY)
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 chroma_client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
 collection = chroma_client.get_or_create_collection(name="health_docs")
+
+if AFRICASTALKING_API_KEY:
+    africastalking.initialize(AFRICASTALKING_USERNAME, AFRICASTALKING_API_KEY)
+    sms = africastalking.SMS
 
 # --- FastAPI Setup ---
 app = FastAPI(title="AskDokita API", description="AI-powered health information chatbot")
@@ -125,7 +132,12 @@ async def chat(request: Request, chat_req: ChatRequest):
             contents=history + [types.Content(role="user", parts=[types.Part(text=chat_req.message)])],
             config=types.GenerateContentConfig(
                 tools=tools_config,
-                system_instruction="You are AskDokita, a helpful health assistant. Prioritize verified sources. Use Google Search for latest info."
+                system_instruction=(
+                    "You are AskDokita, an advanced AI health assistant. "
+                    "Provide the most accurate, up-to-date, and grounded medical information available. "
+                    "Always source your facts from trusted global health organizations (WHO, Africa CDC) and ensure data is current. "
+                    "Be stern, professional, and direct. Prioritize factual accuracy above all else."
+                )
             )
         )
 
@@ -167,7 +179,10 @@ async def sms_reply(request: Request, Body: str = Form(...), From: str = Form(..
             contents=history + [types.Content(role="user", parts=[types.Part(text=Body)])],
             config=types.GenerateContentConfig(
                 tools=tools_config,
-                system_instruction="You are AskDokita. Keep responses concise for SMS."
+                system_instruction=(
+                    "You are AskDokita. Provide strictly grounded and up-to-date health facts. "
+                    "Ensure accuracy. Keep response under 160 chars. Be professional."
+                )
             )
         )
 
@@ -185,6 +200,81 @@ async def sms_reply(request: Request, Body: str = Form(...), From: str = Form(..
         twiml = MessagingResponse()
         twiml.message(f"Error: {str(e)}")
         return Response(content=str(twiml), media_type="application/xml")
+
+@app.post("/ussd")
+@limiter.limit("10/minute")
+async def ussd_callback(request: Request):
+    form_data = await request.form()
+    session_id = form_data.get("sessionId")
+    service_code = form_data.get("serviceCode")
+    phone_number = form_data.get("phoneNumber")
+    text = form_data.get("text", "")
+
+    response = ""
+
+    if text == "":
+        response = "CON Welcome to AskDokita\n"
+        response += "1. Ask a Health Question\n"
+        response += "2. About Us"
+    
+    elif text == "1":
+        response = "CON Enter your question:"
+        
+    elif text.startswith("1*"):
+        question = text.split("*")[1]
+        # Simple RAG/AI call (synchronous for USSD speed)
+        # For production, consider caching or faster model
+        try:
+            ai_response = client.models.generate_content(
+                model='gemini-2.5-flash-lite',
+                contents=[types.Content(role="user", parts=[types.Part(text=question)])],
+                config=types.GenerateContentConfig(
+                    system_instruction="Strictly grounded health facts. Up-to-date info only. Max 140 chars."
+                )
+            )
+            response = f"END {ai_response.text}"
+        except Exception:
+            response = "END Error processing request."
+        
+    elif text == "2":
+        response = "END AskDokita provides verified health info."
+        
+    else:
+        response = "END Invalid option."
+
+    return PlainTextResponse(response)
+
+@app.post("/sms/at")
+@limiter.limit("10/minute")
+async def incoming_sms_at(request: Request):
+    form_data = await request.form()
+    text = form_data.get("text")
+    sender = form_data.get("from")
+    
+    if not text or not sender:
+        return {"error": "Missing data"}
+
+    try:
+        # Generate AI Response
+        ai_response = client.models.generate_content(
+            model='gemini-2.5-flash-lite',
+            contents=[types.Content(role="user", parts=[types.Part(text=text)])],
+            config=types.GenerateContentConfig(
+                system_instruction="Strictly grounded, up-to-date health facts. Concise for SMS."
+            )
+        )
+        
+        # Send Reply via Africa's Talking
+        if AFRICASTALKING_API_KEY:
+            try:
+                sms.send(ai_response.text, [sender])
+            except Exception as e:
+                print(f"AT SMS Error: {e}")
+
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"status": "error"}
 
 if __name__ == "__main__":
     import uvicorn
