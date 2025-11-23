@@ -8,3 +8,4 @@ pydantic
 twilio
 slowapi
 uvicorn
+python-multipart
