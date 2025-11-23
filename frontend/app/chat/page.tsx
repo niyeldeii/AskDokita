@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Link from "next/link";
 
 interface Message {
     role: "user" | "model";
@@ -37,12 +38,19 @@ export default function ChatPage() {
     }, [messages, isLoaded]);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
     };
 
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    const handleNewChat = () => {
+        if (confirm("Start a new chat? This will clear your current history.")) {
+            setMessages([]);
+            localStorage.removeItem("askdokita_history");
+        }
+    };
 
     const sendMessage = async () => {
         if (!input.trim()) return;
@@ -121,47 +129,60 @@ export default function ChatPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50">
+        <div className="flex flex-col h-screen bg-gray-50 font-sans">
             {/* Header */}
-            <header className="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
-                <div className="flex items-center space-x-2">
-                    <a href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                        <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">
+            <header className="bg-white border-b border-gray-100 p-4 flex justify-between items-center sticky top-0 z-20 backdrop-blur-sm bg-white/90">
+                <div className="flex items-center space-x-3">
+                    <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity group">
+                        <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl flex items-center justify-center text-white font-bold shadow-sm group-hover:shadow-md transition-all">
                             AD
                         </div>
-                        <h1 className="text-xl font-bold text-gray-800">AskDokita</h1>
-                    </a>
+                        <h1 className="text-lg font-bold text-gray-800 tracking-tight">AskDokita</h1>
+                    </Link>
                 </div>
-                <nav>
-                    <a href="/about" className="text-gray-600 hover:text-teal-600 transition-colors font-medium">
+                <nav className="flex items-center space-x-4">
+                    <button
+                        onClick={handleNewChat}
+                        className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all flex items-center space-x-1.5"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        <span>New Chat</span>
+                    </button>
+                    <Link href="/#about" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
                         About
-                    </a>
+                    </Link>
                 </nav>
             </header>
 
             {/* Chat Area */}
-            <main className="flex-1 overflow-y-auto p-4 space-y-4">
+            <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
                 {!isLoaded ? (
-                    <div className="flex justify-center items-center h-full">Loading...</div>
+                    <div className="flex justify-center items-center h-full text-gray-400 animate-pulse">Loading history...</div>
                 ) : messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4">
-                        <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 text-2xl">
-                            👋
+                    <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-6 animate-in fade-in zoom-in duration-500">
+                        <div className="w-20 h-20 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 mb-2 shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                            </svg>
                         </div>
-                        <p className="text-lg font-medium">Welcome to AskDokita!</p>
-                        <p className="text-sm max-w-md text-center">
-                            I'm your AI health assistant. I provide verified health information based on WHO and Africa CDC guidelines.
-                        </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-md">
+                        <div className="text-center max-w-md space-y-2">
+                            <h2 className="text-2xl font-bold text-gray-800">Hello! I'm AskDokita.</h2>
+                            <p className="text-gray-600 leading-relaxed">
+                                I can help you with verified health information. Ask me about symptoms, diseases, or general wellness tips.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mt-4">
                             <button
                                 onClick={() => setInput("What are the symptoms of malaria?")}
-                                className="p-3 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 text-left transition-colors"
+                                className="p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-teal-300 hover:shadow-md hover:text-teal-700 transition-all text-left"
                             >
                                 "What are the symptoms of malaria?"
                             </button>
                             <button
                                 onClick={() => setInput("How can I prevent cholera?")}
-                                className="p-3 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 text-left transition-colors"
+                                className="p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-teal-300 hover:shadow-md hover:text-teal-700 transition-all text-left"
                             >
                                 "How can I prevent cholera?"
                             </button>
@@ -171,18 +192,27 @@ export default function ChatPage() {
                     messages.map((msg, index) => (
                         <div
                             key={index}
-                            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                            className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-2 duration-300`}
                         >
-                            <div
-                                className={`max-w-[80%] md:max-w-[70%] p-3 rounded-2xl ${msg.role === "user"
-                                    ? "bg-teal-600 text-white rounded-br-none"
-                                    : "bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm"
-                                    }`}
-                            >
-                                <div className={`prose prose-sm max-w-none ${msg.role === "user" ? "prose-invert" : ""} prose-p:leading-relaxed prose-pre:bg-gray-100 prose-pre:p-2 prose-pre:rounded-lg`}>
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                        {msg.content}
-                                    </ReactMarkdown>
+                            <div className={`flex max-w-[90%] md:max-w-[80%] ${msg.role === "user" ? "flex-row-reverse" : "flex-row"} gap-3`}>
+                                {/* Avatar */}
+                                <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold shadow-sm mt-1 ${msg.role === "user" ? "bg-gray-800 text-white" : "bg-teal-600 text-white"
+                                    }`}>
+                                    {msg.role === "user" ? "U" : "AD"}
+                                </div>
+
+                                {/* Bubble */}
+                                <div
+                                    className={`p-4 rounded-2xl shadow-sm leading-relaxed text-[15px] ${msg.role === "user"
+                                            ? "bg-gray-800 text-white rounded-tr-none"
+                                            : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
+                                        }`}
+                                >
+                                    <div className={`prose prose-sm max-w-none ${msg.role === "user" ? "prose-invert" : "prose-teal"} prose-p:my-1 prose-ul:my-1 prose-li:my-0`}>
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.content}
+                                        </ReactMarkdown>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -190,41 +220,44 @@ export default function ChatPage() {
                 )}
 
                 {isLoading && (
-                    <div className="flex justify-start">
-                        <div className="bg-white border border-gray-200 p-4 rounded-2xl rounded-bl-none shadow-sm">
-                            <div className="flex space-x-2">
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                    <div className="flex justify-start w-full animate-in fade-in duration-300">
+                        <div className="flex max-w-[80%] flex-row gap-3">
+                            <div className="w-8 h-8 rounded-full bg-teal-600 flex-shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm mt-1">
+                                AD
+                            </div>
+                            <div className="bg-white border border-gray-100 p-4 rounded-2xl rounded-tl-none shadow-sm flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                                <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                                <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
                             </div>
                         </div>
                     </div>
                 )}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} className="h-4" />
             </main>
 
             {/* Input Area */}
-            <footer className="bg-white border-t border-gray-200 p-4">
-                <div className="max-w-4xl mx-auto relative">
+            <footer className="bg-white/80 backdrop-blur-md border-t border-gray-100 p-4 md:p-6">
+                <div className="max-w-4xl mx-auto relative shadow-sm rounded-2xl bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-teal-500/20 focus-within:border-teal-500 transition-all">
                     <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Type your health question..."
-                        className="w-full p-4 pr-12 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none h-[60px] max-h-[120px] text-gray-800 placeholder-gray-400"
+                        placeholder="Ask a health question..."
+                        className="w-full p-4 pr-14 bg-transparent border-none focus:ring-0 resize-none h-[60px] max-h-[150px] text-gray-800 placeholder-gray-400 text-base"
                         rows={1}
                     />
                     <button
                         onClick={sendMessage}
                         disabled={isLoading || !input.trim()}
-                        className="absolute right-3 top-3 p-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="absolute right-2 top-2 p-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md active:scale-95"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                             <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
                         </svg>
                     </button>
                 </div>
-                <p className="text-center text-xs text-gray-400 mt-2">
+                <p className="text-center text-xs text-gray-400 mt-3 font-medium">
                     AskDokita provides information, not medical advice. In emergencies, see a doctor.
                 </p>
             </footer>

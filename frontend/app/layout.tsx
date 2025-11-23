@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AskDokita - AI Health Assistant",
+  title: "AskDokita - Health Assistant",
   description: "Verified health information for underserved communities.",
   icons: {
     icon: "/icon.png",
