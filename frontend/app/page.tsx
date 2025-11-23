@@ -32,7 +32,7 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/chat", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -156,12 +156,11 @@ export default function Home() {
                 : "bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm"
                 }`}
             >
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                className={`prose prose-sm max-w-none ${msg.role === "user" ? "prose-invert" : ""} prose-p:leading-relaxed prose-pre:bg-gray-100 prose-pre:p-2 prose-pre:rounded-lg`}
-              >
-                {msg.content}
-              </ReactMarkdown>
+              <div className={`prose prose-sm max-w-none ${msg.role === "user" ? "prose-invert" : ""} prose-p:leading-relaxed prose-pre:bg-gray-100 prose-pre:p-2 prose-pre:rounded-lg`}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
         ))}

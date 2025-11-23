@@ -14,6 +14,9 @@ import redis.asyncio as redis
 import chromadb
 from chromadb.config import Settings
 from twilio.twiml.messaging_response import MessagingResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 load_dotenv()
 
@@ -33,6 +36,10 @@ collection = chroma_client.get_or_create_collection(name="health_docs")
 
 # --- FastAPI Setup ---
 app = FastAPI(title="AskDokita API", description="AI-powered health information chatbot")
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -108,13 +115,14 @@ def read_root():
     return {"message": "Welcome to AskDokita API (Native Gemini + Redis)"}
 
 @app.post("/chat")
-async def chat(request: ChatRequest):
+@limiter.limit("10/minute")
+async def chat(request: Request, chat_req: ChatRequest):
     try:
-        history = await get_session_history(request.session_id)
+        history = await get_session_history(chat_req.session_id)
         
         response_stream = await client.aio.models.generate_content_stream(
             model='gemini-2.5-flash-lite',
-            contents=history + [types.Content(role="user", parts=[types.Part(text=request.message)])],
+            contents=history + [types.Content(role="user", parts=[types.Part(text=chat_req.message)])],
             config=types.GenerateContentConfig(
                 tools=tools_config,
                 system_instruction="You are AskDokita, a helpful health assistant. Prioritize verified sources. Use Google Search for latest info."
@@ -134,10 +142,10 @@ async def chat(request: ChatRequest):
                      grounding_metadata = chunk.candidates[0].grounding_metadata
 
             new_history = history + [
-                types.Content(role="user", parts=[types.Part(text=request.message)]),
+                types.Content(role="user", parts=[types.Part(text=chat_req.message)]),
                 types.Content(role="model", parts=[types.Part(text=full_response_text)])
             ]
-            await save_session_history(request.session_id, new_history)
+            await save_session_history(chat_req.session_id, new_history)
             
             if grounding_metadata:
                  yield json.dumps({"grounding": True}) + "\n"
@@ -148,7 +156,8 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/sms")
-async def sms_reply(Body: str = Form(...), From: str = Form(...)):
+@limiter.limit("10/minute")
+async def sms_reply(request: Request, Body: str = Form(...), From: str = Form(...)):
     try:
         session_id = From
         history = await get_session_history(session_id)
