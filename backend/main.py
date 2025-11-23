@@ -222,8 +222,6 @@ async def ussd_callback(request: Request):
         
     elif text.startswith("1*"):
         question = text.split("*")[1]
-        # Simple RAG/AI call (synchronous for USSD speed)
-        # For production, consider caching or faster model
         try:
             ai_response = client.models.generate_content(
                 model='gemini-2.5-flash-lite',

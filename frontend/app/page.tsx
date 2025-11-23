@@ -1,208 +1,84 @@
-"use client";
+import Link from "next/link";
 
-import { useState, useRef, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-
-interface Message {
-  role: "user" | "model";
-  content: string;
-}
-
-export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-
-    const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: input,
-          session_id: "web-user", // Simple session ID for now
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to get response");
-      }
-
-      // Initialize bot message
-      const botMessage: Message = { role: "model", content: "" };
-      setMessages((prev) => [...prev, botMessage]);
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n").filter((line) => line.trim() !== "");
-
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line);
-              if (data.text) {
-                setMessages((prev) => {
-                  const newMessages = [...prev];
-                  const lastMessage = newMessages[newMessages.length - 1];
-                  if (lastMessage.role === "model") {
-                    lastMessage.content += data.text;
-                  }
-                  return newMessages;
-                });
-              }
-            } catch (e) {
-              console.error("Error parsing chunk:", e);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      const errorMessage: Message = {
-        role: "model",
-        content: "Sorry, I encountered an error. Please try again later.",
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
+export default function LandingPage() {
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
+      <header className="p-6 flex justify-between items-center max-w-6xl mx-auto w-full">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+          <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
             AD
           </div>
-          <h1 className="text-xl font-bold text-gray-800">AskDokita</h1>
+          <span className="text-2xl font-bold text-teal-900">AskDokita</span>
         </div>
-        <nav>
-          <a href="/about" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
-            About
-          </a>
+        <nav className="hidden md:flex space-x-8 text-gray-600 font-medium">
+          <a href="#features" className="hover:text-teal-600 transition-colors">Features</a>
+          <a href="#about" className="hover:text-teal-600 transition-colors">About</a>
+          <Link href="/chat" className="text-teal-600 hover:text-teal-700">Try Demo</Link>
         </nav>
       </header>
 
-      {/* Chat Area */}
-      <main className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl">
-              👋
-            </div>
-            <p className="text-lg font-medium">Welcome to AskDokita!</p>
-            <p className="text-sm max-w-md text-center">
-              I'm your AI health assistant, designed to help underserved communities access reliable health info. Ask me about symptoms, prevention, or general guidance.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-md">
-              <button
-                onClick={() => setInput("What are the symptoms of malaria?")}
-                className="p-3 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 text-left transition-colors"
-              >
-                "What are the symptoms of malaria?"
-              </button>
-              <button
-                onClick={() => setInput("How can I prevent cholera?")}
-                className="p-3 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 text-left transition-colors"
-              >
-                "How can I prevent cholera?"
-              </button>
-            </div>
-          </div>
-        )}
-
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[80%] md:max-w-[70%] p-3 rounded-2xl ${msg.role === "user"
-                ? "bg-blue-600 text-white rounded-br-none"
-                : "bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm"
-                }`}
+      {/* Hero Section */}
+      <main className="flex-1">
+        <section className="px-6 py-20 md:py-32 text-center max-w-4xl mx-auto">
+          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900 mb-6">
+            Your AI Health Assistant for <span className="text-teal-600">Verified Answers</span>.
+          </h1>
+          <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+            AskDokita provides accurate, grounded health information to underserved communities.
+            Powered by AI, verified by global health standards.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link
+              href="/chat"
+              className="px-8 py-4 bg-teal-600 text-white text-lg font-semibold rounded-full hover:bg-teal-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
-              <div className={`prose prose-sm max-w-none ${msg.role === "user" ? "prose-invert" : ""} prose-p:leading-relaxed prose-pre:bg-gray-100 prose-pre:p-2 prose-pre:rounded-lg`}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {msg.content}
-                </ReactMarkdown>
-              </div>
-            </div>
+              Start Chatting Now
+            </Link>
+            <a
+              href="#features"
+              className="px-8 py-4 bg-gray-100 text-gray-700 text-lg font-semibold rounded-full hover:bg-gray-200 transition-all"
+            >
+              Learn More
+            </a>
           </div>
-        ))}
+        </section>
 
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-gray-200 p-4 rounded-2xl rounded-bl-none shadow-sm">
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+        {/* Features Section */}
+        <section id="features" className="bg-gray-50 py-20 px-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl font-bold text-center mb-16 text-gray-900">Why AskDokita?</h2>
+            <div className="grid md:grid-cols-3 gap-10">
+              <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center text-teal-600 mb-6">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3">Verified Information</h3>
+                <p className="text-gray-600">All answers are grounded in data from trusted organizations like WHO and Africa CDC.</p>
+              </div>
+              <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-6">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3">SMS & USSD Support</h3>
+                <p className="text-gray-600">Accessible on any device, even without internet, via our Africa's Talking integration.</p>
+              </div>
+              <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 mb-6">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3">Private & Secure</h3>
+                <p className="text-gray-600">Your health queries are private. We prioritize user anonymity and data security.</p>
               </div>
             </div>
           </div>
-        )}
-        <div ref={messagesEndRef} />
+        </section>
       </main>
 
-      {/* Input Area */}
-      <footer className="bg-white border-t border-gray-200 p-4">
-        <div className="max-w-4xl mx-auto relative">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your health question..."
-            className="w-full p-4 pr-12 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none h-[60px] max-h-[120px] text-gray-800 placeholder-gray-400"
-            rows={1}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={isLoading || !input.trim()}
-            className="absolute right-3 top-3 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-              <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-            </svg>
-          </button>
-        </div>
-        <p className="text-center text-xs text-gray-400 mt-2">
-          AskDokita provides information, not medical advice. In emergencies, see a doctor.
-        </p>
+      {/* Footer */}
+      <footer className="bg-white py-10 border-t border-gray-100 text-center text-gray-500 text-sm">
+        <p>© 2025 AskDokita. All rights reserved.</p>
+        <p className="mt-2">Not a substitute for professional medical advice.</p>
       </footer>
     </div>
   );
