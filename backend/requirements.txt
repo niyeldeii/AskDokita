@@ -8,4 +8,5 @@ pydantic
 twilio
 slowapi
 uvicorn
+africastalking
 python-multipart

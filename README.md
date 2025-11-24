@@ -70,7 +70,14 @@ To enable SMS for low-internet areas:
 2.  Set the **Messaging Webhook** to `POST https://your-url.com/sms`.
 3.  The backend returns TwiML to handle the conversation.
 
-### 5. Local Testing with Ngrok
+### 5. Africa's Talking Setup (SMS & USSD)
+For African regions, we support **Africa's Talking**:
+1.  Sign up at [africastalking.com](https://africastalking.com/).
+2.  Get your `USERNAME` and `API_KEY` (Sandbox).
+3.  Add them to `.env`.
+4.  See [AFRICASTALKING.md](AFRICASTALKING.md) for detailed integration patterns.
+
+### 6. Local Testing with Ngrok
 To test the SMS functionality or access the app from other devices while running locally:
 
 1.  **Install Ngrok**: Download from [ngrok.com](https://ngrok.com/).
